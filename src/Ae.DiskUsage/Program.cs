@@ -3,6 +3,7 @@ using Humanizer;
 using ImGuiNET;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using Veldrid;
 using Veldrid.StartupUtilities;
@@ -13,8 +14,6 @@ namespace Ae.DiskUsage
     {
         static void Main()
         {
-            var directory = new DirectoryInfo(@"C:\");
-
             var windowInfo = new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "Ae.DiskUsage");
 
             TreeItem analyser = null;
@@ -23,36 +22,46 @@ namespace Ae.DiskUsage
 
             while (window.Loop(new Vector3(0.45f, 0.55f, 0.6f)))
             {
-                ImGui.SetNextWindowPos(new Vector2(32, 32));
-                ImGui.SetNextWindowSize(new Vector2(1200, 650));
-                ImGui.Begin($"Results for {directory}");
-
-                if (!analyser?.IsCalculating ?? false)
-                {
-                    if (ImGui.Button("Refresh all"))
-                    {
-                        analyser.Refresh();
-                    }
-                }
-
                 if (analyser == null)
                 {
-                    analyser = new TreeItem(directory, null);
+                    ImGui.OpenPopup("Select Drive");
+                    ImGui.BeginPopupModal("Select Drive");
+
+                    foreach (var drive in DriveInfo.GetDrives())
+                    {
+                        if (ImGui.Button(drive.Name))
+                        {
+                            analyser = new TreeItem(drive.RootDirectory, null);
+                        }
+                    }                   
+
+                    ImGui.EndPopup();
                 }
                 else
                 {
-                    RenderTreeItem(analyser);
-                }
+                    ImGui.SetNextWindowPos(new Vector2(32, 32));
+                    ImGui.SetNextWindowSize(new Vector2(1200, 650));
+                    ImGui.Begin($"Results for {analyser.Directory}");
 
-                ImGui.End();
+                    if (!analyser.IsCalculating)
+                    {
+                        if (ImGui.Button("Refresh all"))
+                        {
+                            analyser.Refresh();
+                        }
+                    }
+
+                    RenderTreeItem(analyser);
+                    ImGui.End();
+                }
             }
         }
 
         public static void RenderTreeItem(TreeItem treeItem)
         {
-            foreach (var node in treeItem.CachedChildrenBySizeDescending)
+            foreach (var node in treeItem.Children.OrderByDescending(x => x.TotalSize))
             {
-                var size = node.CachedSize.Bytes().Humanize("#.#");
+                var size = node.TotalSize.Bytes().Humanize("#.#");
 
                 var tag = node.IsCalculating ? $"calculating - {size}" : size;
 
@@ -60,7 +69,7 @@ namespace Ae.DiskUsage
 
                 if (node.Children.Count == 0)
                 {
-                    flags &= ImGuiTreeNodeFlags.Leaf;
+                    flags |= ImGuiTreeNodeFlags.Leaf;
                 }
 
                 bool open = ImGui.TreeNodeEx(node.Directory.FullName, flags, $"{node.Directory.Name} ({tag})");
