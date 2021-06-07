@@ -24,24 +24,28 @@ namespace Ae.DiskUsage
             {
                 if (analyser == null)
                 {
-                    ImGui.OpenPopup("Select Drive");
-                    ImGui.BeginPopupModal("Select Drive");
+                    ImGui.SetNextWindowSize(new Vector2(256, 128), ImGuiCond.Once);
+                    ImGui.Begin("Select Drive");
+                    ImGui.Text("Select drive to analyse.");
 
                     foreach (var drive in DriveInfo.GetDrives())
                     {
-                        if (ImGui.Button(drive.Name))
+                        if (ImGui.Button($"{drive.Name}"))
                         {
                             analyser = new TreeItem(drive.RootDirectory, null);
                         }
+
+                        ImGui.SameLine();
+                        ImGui.Text($"{drive.TotalFreeSpace.Bytes().Humanize("#.#")} free");
                     }                   
 
-                    ImGui.EndPopup();
+                    ImGui.End();
                 }
                 else
                 {
-                    ImGui.SetNextWindowPos(new Vector2(32, 32));
-                    ImGui.SetNextWindowSize(new Vector2(1200, 650));
-                    ImGui.Begin($"Results for {analyser.Directory}");
+                    ImGui.SetNextWindowPos(new Vector2(32, 32), ImGuiCond.Once);
+                    ImGui.SetNextWindowSize(new Vector2(1200, 650), ImGuiCond.Once);
+                    ImGui.Begin($"Results for {analyser.Directory} ({GetTag(analyser)})");
 
                     if (!analyser.IsCalculating)
                     {
@@ -57,14 +61,16 @@ namespace Ae.DiskUsage
             }
         }
 
+        private static string GetTag(TreeItem node)
+        {
+            var size = node.TotalSize.Bytes().Humanize("#.#");
+            return node.IsCalculating ? $"calculating - {size}" : size;
+        }
+
         public static void RenderTreeItem(TreeItem treeItem)
         {
             foreach (var node in treeItem.Children.OrderByDescending(x => x.TotalSize))
             {
-                var size = node.TotalSize.Bytes().Humanize("#.#");
-
-                var tag = node.IsCalculating ? $"calculating - {size}" : size;
-
                 var flags = ImGuiTreeNodeFlags.None;
 
                 if (node.Children.Count == 0)
@@ -72,7 +78,7 @@ namespace Ae.DiskUsage
                     flags |= ImGuiTreeNodeFlags.Leaf;
                 }
 
-                bool open = ImGui.TreeNodeEx(node.Directory.FullName, flags, $"{node.Directory.Name} ({tag})");
+                bool open = ImGui.TreeNodeEx(node.Directory.FullName, flags, $"{node.Directory.Name} ({GetTag(node)})");
 
                 if (ImGui.BeginPopupContextItem())
                 {
