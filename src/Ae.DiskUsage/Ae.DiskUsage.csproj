@@ -3,14 +3,10 @@
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
-        <PublishSingleFile>true</PublishSingleFile>
-        <SelfContained>true</SelfContained>
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-		<PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Ae.ImGuiBootstrapper" Version="0.0.2" />
+        <PackageReference Include="Ae.ImGuiBootstrapper" Version="0.0.3" />
         <PackageReference Include="Humanizer" Version="2.11.10" />
         <PackageReference Include="ImGui.NET" Version="1.78.0" />
         <PackageReference Include="Veldrid" Version="4.8.0" />
