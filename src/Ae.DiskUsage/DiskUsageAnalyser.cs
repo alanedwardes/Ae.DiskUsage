@@ -37,7 +37,18 @@ namespace Ae.DiskUsage
             RefreshTask = Task.Run(() => Calculate());
         }
 
-        public bool IsCalculating => RefreshTask.Status != TaskStatus.RanToCompletion;
+        public bool IsCalculating
+        {
+            get
+            {
+                if (RefreshTask.Status == TaskStatus.Faulted)
+                {
+                    throw RefreshTask.Exception;
+                }
+
+                return RefreshTask.Status != TaskStatus.RanToCompletion;
+            }
+        }
 
         public async Task Calculate()
         {
