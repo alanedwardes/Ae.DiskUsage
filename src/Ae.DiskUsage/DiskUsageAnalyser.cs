@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,12 +10,15 @@ namespace Ae.DiskUsage
 {
     public sealed class TreeItem
     {
-        public TreeItem(DirectoryInfo directory, TreeItem parent)
+        public TreeItem(DirectoryInfo directory, TreeItem parent, BlockingCollection<string> accessErrors)
         {
             Directory = directory;
             Parent = parent;
+            _accessErrors = accessErrors;
             Refresh();
         }
+
+        private readonly BlockingCollection<string> _accessErrors;
 
         public IList<TreeItem> Children => _children;
         public DirectoryInfo Directory { get; }
@@ -59,11 +63,12 @@ namespace Ae.DiskUsage
             }
             catch (UnauthorizedAccessException)
             {
+                _accessErrors.Add("Unable to access " + Directory);
                 return;
             }
 
             Interlocked.Exchange(ref _fileSize, children.OfType<FileInfo>().Sum(x => x.Length));
-            Interlocked.Exchange(ref _children, children.OfType<DirectoryInfo>().Select(x => new TreeItem(x, this)).ToArray());
+            Interlocked.Exchange(ref _children, children.OfType<DirectoryInfo>().Select(x => new TreeItem(x, this, _accessErrors)).ToArray());
 
             foreach (var child in Children)
             {

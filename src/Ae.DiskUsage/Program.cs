@@ -2,6 +2,7 @@
 using Humanizer;
 using ImGuiNET;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -21,9 +22,21 @@ namespace Ae.DiskUsage
 
             using var window = new ImGuiWindow(windowInfo);
 
+            var io = ImGui.GetIO();
+            io.Fonts.AddFontFromFileTTF(@"Fonts\NotoSans-Regular.ttf", 20);
+
+            ImGui.GetStyle().WindowRounding = 0.0f;
+            ImGui.GetStyle().ChildRounding = 0.0f;
+            ImGui.GetStyle().FrameRounding = 0.0f;
+            ImGui.GetStyle().GrabRounding = 0.0f;
+            ImGui.GetStyle().PopupRounding = 0.0f;
+            ImGui.GetStyle().ScrollbarRounding = 0.0f;
+
             var backgroundColor = new Vector3(0.45f, 0.55f, 0.6f);
 
             Exception exception = null;
+
+            var accessErrors = new BlockingCollection<string>();
 
             while (window.Loop(ref backgroundColor))
             {
@@ -37,7 +50,14 @@ namespace Ae.DiskUsage
                 {
                     try
                     {
-                        RenderLoop(ref analyser);
+                        if (analyser == null)
+                        {
+                            RenderSelectDrive(ref analyser, accessErrors);
+                        }
+                        else
+                        {
+                            RenderTree(ref analyser, accessErrors);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -47,43 +67,50 @@ namespace Ae.DiskUsage
             }
         }
 
-        private static void RenderLoop(ref TreeItem analyser)
+        private static void RenderSelectDrive(ref TreeItem analyser, BlockingCollection<string> logMessages)
         {
-            if (analyser == null)
-            {
-                RenderSelectDrive(ref analyser);
-            }
-            else
-            {
-                RenderTree(ref analyser);
-            }
-        }
+            var viewport = ImGui.GetMainViewport();
 
-        private static void RenderSelectDrive(ref TreeItem analyser)
-        {
-            ImGui.SetNextWindowSize(new Vector2(256, 128), ImGuiCond.Once);
-            ImGui.Begin("Select Drive");
+            var flags = ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;
+
+            ImGui.SetNextWindowPos(viewport.Pos, ImGuiCond.Always);
+            ImGui.SetNextWindowSize(viewport.Size, ImGuiCond.Always);
+            ImGui.Begin("Select Drive", flags);
             ImGui.Text("Select drive to analyse.");
 
             foreach (var drive in DriveInfo.GetDrives())
             {
                 if (ImGui.Button($"{drive.Name}"))
                 {
-                    analyser = new TreeItem(drive.RootDirectory, null);
+                    analyser = new TreeItem(drive.RootDirectory, null, logMessages);
                 }
 
                 ImGui.SameLine();
-                ImGui.Text($"{drive.TotalFreeSpace.Bytes().Humanize("#.#")} free");
+                try
+                {
+                    ImGui.Text($"{drive.TotalFreeSpace.Bytes().Humanize("#.#")} free");
+                }
+                catch (Exception)
+                {
+                    ImGui.Text("(unable to calculate free space)");
+                }
             }
 
             ImGui.End();
         }
 
-        private static void RenderTree(ref TreeItem analyser)
+        private static void RenderTree(ref TreeItem analyser, BlockingCollection<string> logMessages)
         {
-            ImGui.SetNextWindowPos(new Vector2(32, 32), ImGuiCond.Once);
-            ImGui.SetNextWindowSize(new Vector2(1200, 650), ImGuiCond.Once);
-            ImGui.Begin($"Results for {analyser.Directory} ({GetTag(analyser)})");
+            var viewport = ImGui.GetMainViewport();
+
+            var flags = ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse;
+
+            var firstPosition = viewport.Pos;
+            var firstSize = viewport.Size * new Vector2(1, 0.75f);
+
+            ImGui.SetNextWindowPos(firstPosition, ImGuiCond.Always);
+            ImGui.SetNextWindowSize(firstSize, ImGuiCond.Always);
+            ImGui.Begin($"Results for {analyser.Directory} ({GetTag(analyser)})###ResultsWindow", flags);
 
             if (!analyser.IsCalculating)
             {
@@ -94,6 +121,19 @@ namespace Ae.DiskUsage
             }
 
             RenderTreeItem(analyser);
+            ImGui.End();
+
+            var secondPosition = viewport.Size * new Vector2(0, 0.75f);
+            var secondSize = viewport.Size * new Vector2(1, 0.25f);
+
+            ImGui.SetNextWindowPos(secondPosition, ImGuiCond.Always);
+            ImGui.SetNextWindowSize(secondSize, ImGuiCond.Always);
+            ImGui.Begin("Console", flags);
+            foreach (var logMessage in logMessages)
+            {
+                ImGui.Text(logMessage);
+            }
+            ImGui.SetScrollHereY();
             ImGui.End();
         }
 

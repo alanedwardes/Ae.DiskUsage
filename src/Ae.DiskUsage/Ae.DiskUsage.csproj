@@ -13,4 +13,11 @@
         <PackageReference Include="Veldrid.StartupUtilities" Version="4.8.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Fonts\NotoSans-Regular.ttf">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	  </None>
+    </ItemGroup>
+
 </Project>
