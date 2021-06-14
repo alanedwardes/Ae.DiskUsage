@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Ae.ImGuiBootstrapper" Version="0.0.4" />
+        <PackageReference Include="Ae.ImGuiBootstrapper" Version="0.0.10" />
         <PackageReference Include="Humanizer.Core" Version="2.11.10" />
         <PackageReference Include="ImGui.NET" Version="1.78.0" />
         <PackageReference Include="Veldrid" Version="4.8.0" />
