@@ -63,7 +63,12 @@ namespace Ae.DiskUsage
             }
             catch (UnauthorizedAccessException)
             {
-                _accessErrors.Add("Unable to access " + Directory);
+                _accessErrors.Add("Not authorized to access " + Directory);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                _accessErrors.Add("Could not find " + Directory);
                 return;
             }
 
